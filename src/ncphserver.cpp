@@ -25,6 +25,7 @@
 #include<vector>
 #include <gmpxx.h>
 #include<fstream>
+#include<sstream>
 #include"assert.h"
 extern "C" {
     #include <gmp.h>
@@ -32,6 +33,7 @@ extern "C" {
 }
 #include <chrono>
 #include <thread>
+#include <string>
 
 int get_rand_index(int const &size) {
     /* PRE: accepts the size of the array for which random index is needed, must be positive int
@@ -152,14 +154,14 @@ int main() {
 
     /* Prepare/clean file for export */
     std::ofstream ctxtFile0;
-    ctxtFile0.open("ciphertext.txt", std::ofstream::out | std::ofstream::trunc);
+    ctxtFile0.open("ciphertext1.txt", std::ofstream::out | std::ofstream::trunc);
     ctxtFile0.close();
 
 
     /* EXPORT TO BYTESTRING */
     // Open the file in "append" mode
-    std::fstream ctxtFile1("ciphertext.txt", std::fstream::out|std::fstream::app|std::fstream::binary);
-
+    std::fstream ctxtFile1("ciphertext1.txt", std::fstream::out|std::fstream::app|std::fstream::binary);
+    std::ostringstream export_str;                          // use sstream to create one string buffer for the whole vector
     for (int i = 0; i < arr_size; ++i) {
         paillier_plaintext_t* plain_beta = paillier_plaintext_from_ui((int)abs(betas[i])); // currently, we only consider positive beta values
         paillier_ciphertext_t* enc_beta = paillier_enc(NULL, pu, plain_beta, paillier_get_rand_devurandom);
@@ -168,12 +170,13 @@ int main() {
         // The length of the ciphertext is twice the length of the key
         char* byteCtxt1 = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(pu->bits)*2, enc_beta);
         // append the bytestring for each beta
-        ctxtFile1.write(byteCtxt1, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
+        export_str.write(byteCtxt1, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
 
         /* CLEANUP */
         paillier_freeplaintext(plain_beta);
 
     }
+    ctxtFile1.write(export_str.str().c_str(), PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size);
     ctxtFile1.close();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
