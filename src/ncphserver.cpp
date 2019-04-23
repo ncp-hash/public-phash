@@ -169,13 +169,14 @@ int main() {
         
         // The length of the ciphertext is twice the length of the key
         char* byteCtxt1 = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(pu->bits)*2, enc_beta);
-        // append the bytestring for each beta
+        // Append the bytestring for each beta to the string buffer
         export_str.write(byteCtxt1, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
 
         /* CLEANUP */
         paillier_freeplaintext(plain_beta);
 
     }
+    // Convert the string buffer into char* and write it into the file
     ctxtFile1.write(export_str.str().c_str(), PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size);
     ctxtFile1.close();
 

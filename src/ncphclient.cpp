@@ -89,15 +89,16 @@ int main() {
     /* IMPORT FROM BYTESTRINGS */
     std::vector<paillier_ciphertext_t*> read_betas;         // prepare vector for read betas
     std::fstream ctxtFile2("ciphertext1.txt", std::fstream::in|std::fstream::binary); // open the file in read mode
-    char* byteCtxtWhole = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size); // read the whole input at once
-    ctxtFile2.read(byteCtxtWhole, PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size); // read one beta at a time from the stringstream
+    char* byteCtxtWhole = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size); // allocate space to store the whole char* array
+    ctxtFile2.read(byteCtxtWhole, PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size); // read the whole input at once from the filestream
     
     for (int i = 0; i < arr_size; ++i) {
     
         // The length of the ciphertext is twice the length of the key
         char* byteCtxt2 = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2);
+        // Coppy one beta from the whole array into byteCtxt2
         memcpy(byteCtxt2, byteCtxtWhole + i*PAILLIER_BITS_TO_BYTES(pu->bits)*2/sizeof(char), PAILLIER_BITS_TO_BYTES(pu->bits)*2/sizeof(char));
-        // Read a bytestring for each beta
+        // Import the char* for one beta to paillier_ciphertext_t
         paillier_ciphertext_t* enc_beta = paillier_ciphertext_from_bytes((void*)byteCtxt2, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
         // Push the encrypted beta to the vector
         read_betas.push_back(enc_beta);
