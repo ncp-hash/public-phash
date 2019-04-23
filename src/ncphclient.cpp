@@ -121,11 +121,6 @@ int main() {
     paillier_ciphertext_t* enc_sum_res = paillier_create_enc_zero(); // initiate a zero-valued ciphertext to hold the result 
     mult_and_sum(pu, enc_sum_res, read_betas, rho_sums);
 
-    // /* Prepare/clean file for export */
-    // std::ofstream ipc3_clean;
-    // ipc3_clean.open("ipc3.txt", std::ofstream::out | std::ofstream::trunc);
-    // ipc3_clean.close();
-
     /* EXPORT TO BYTESTRING */
     // Open the file in "append" mode
     std::fstream ipc3("ipc3.txt", std::fstream::out|std::fstream::trunc|std::fstream::binary);

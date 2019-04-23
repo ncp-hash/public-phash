@@ -152,12 +152,6 @@ int main() {
 
     std::vector<paillier_ciphertext_t*> enc_betas;          // declare a vector for encryptions of betas 
 
-    // /* Prepare/clean file for export */
-    // std::ofstream ipc2_clean;
-    // ipc2_clean.open("ipc2.txt", std::ofstream::out | std::ofstream::trunc);
-    // ipc2_clean.close();
-
-
     /* EXPORT TO BYTESTRING */
     // Open the file in "append" mode
     std::fstream ipc2("ipc2.txt", std::fstream::out|std::fstream::trunc|std::fstream::binary);
