@@ -134,14 +134,25 @@ int main() {
     paillier_keygen(paillier_n, &pu, &pr, paillier_get_rand_devurandom);
 
     // ========================================================================================
-    // SHARE THE PUBLIC KEY
+    // IPC: STARTING THE SERVER
+    // ========================================================================================
+
+    int listening_fd = server_init();
+    int communication_fd = server_connect_to_client(listening_fd);
+
+    // ========================================================================================
+    // IPC: SHARE THE PUBLIC KEY
     // ========================================================================================
     /* Prepare/clean file for export */
-    std::fstream ipc1("ipc1.txt", std::fstream::out|std::fstream::trunc);
-    char* hex_pk = paillier_pubkey_to_hex(pu);
-    ipc1 << hex_pk;
-    ipc1.close();
+    // std::fstream ipc1("ipc1.txt", std::fstream::out|std::fstream::trunc);
+    // char* hex_pk = paillier_pubkey_to_hex(pu);
 
+    server_send_paillier_pubkey(communication_fd, pu, PAILLIER_BITS_TO_BYTES(pu->bits));
+    close(listening_fd);
+    close(communication_fd);
+
+    // ipc1 << hex_pk;
+    // ipc1.close();
     
     // ========================================================================================
     // BETA ARRAY ENCRYPTION
@@ -171,14 +182,23 @@ int main() {
 
     }
     // Convert the string buffer into char* and write it into the file
+
+    // ========================================================================================
+    // IPC: SEND THE ENCRYPTED BETAS
+    // ========================================================================================
+
+    // TODO: change from file write to socket here
+
     ipc2.write(export_str.str().c_str(), PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size);
     ipc2.close();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 
     // ========================================================================================
-    // HASH DECRYPTION
+    // IPC: RECEIVE THE ENCRYPTED HASH
     // ========================================================================================
+
+    // TODO: change file reading to socket here
 
     /* IMPORT FROM BYTESTRINGS */
     std::fstream ipc3("ipc3.txt", std::fstream::in|std::fstream::binary); // open the file
@@ -191,6 +211,9 @@ int main() {
      /* CLEANUP */
     free(char_result);
 
+    // ========================================================================================
+    // HASH DECRYPTION
+    // ========================================================================================
     paillier_plaintext_t* dec_res;
     dec_res = paillier_dec(NULL, pu, pr, read_res);
     gmp_printf("Decrypted hash: %Zd\n", dec_res);

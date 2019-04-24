@@ -75,8 +75,16 @@ int main() {
     int arr_size = 256;
 
     // ========================================================================================
-    // READ THE PUBLIC KEY AND ENCRYPTED BETAS
+    // IPC: STARTING CLIENT
     // ========================================================================================
+    int communication_fd = client_connect_to_server();
+
+    // ========================================================================================
+    // IPC: RECEIVE THE PUBLIC KEY
+    // ========================================================================================
+
+    // TODO: Change file reading to socket ipc here
+
     // Read public key from disk and initialize it
     std::fstream ipc1("ipc1.txt", std::fstream::in);
     std::string hex_pk; 
@@ -86,6 +94,11 @@ int main() {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 
+    // ========================================================================================
+    // IPC: RECEIVE THE ENCRYPTED BETAS
+    // ========================================================================================
+
+    // TODO: Change file reading to socket ipc here
 
     /* IMPORT FROM BYTESTRINGS */
     std::vector<paillier_ciphertext_t*> read_betas;         // prepare vector for read betas
@@ -145,6 +158,13 @@ int main() {
     /*
     *   Export A to bytestring and send it to server together with the real hash
     */
+
+    // ========================================================================================
+    // IPC: SEND THE ENCRYPTED HASH
+    // ========================================================================================
+
+    // TODO: Change file reading to socket ipc here
+
 
     /* EXPORT TO BYTESTRING */
     // Open the file in "append" mode
