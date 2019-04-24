@@ -15,6 +15,9 @@
 #define TRUE 1
 #define FALSE 0
 
+#define SUCCESSS 0
+#define ABORT 1
+
 int server_init(void){
 
 	int listening_socket_fd; 
@@ -78,7 +81,7 @@ int server_connect_to_client(int listening_socket_fd){
 // will loop indefinitely without no recipient response
 //re implement with forks
 //returns 0 on success
-int send_message(int recipient_socket_fd, char* message, int message_len){
+int send_char_string(int recipient_socket_fd, char* message, int message_len){
 
 	char recipient_response[message_len];
 	char expected_response[message_len] = "message recieved.\n";
@@ -103,7 +106,7 @@ int send_message(int recipient_socket_fd, char* message, int message_len){
 //returns 0 on success (positive confirmation)
 int server_send_paillier_pubkey(int client_socket_fd, char* paillier_pubkey, int paillier_pubkey_len){
 
-	ret_val = send_message(client_socket_fd, paillier_pubkey, paillier_pubkey_lenl);
+	ret_val = send_char_string(client_socket_fd, paillier_pubkey, paillier_pubkey_lenl);
 	return ret_val;
 } 
 
@@ -143,13 +146,85 @@ void get_client_input(int client_socket_fd){
 }
 
 // functions to implement
-// client_recieve_public_key
+// client_recieve_public_key (paillier)
 
 // server_send_betas
 // client_recieve_betas
 
 // client_send_enc_hash
 // server_recieve_enc_hash
+
+//******************************************************************************************
+
+
+
+int send_bytes_chunk(int recipient_socket_fd, void *chunk_buffer, int chunk_len){
+
+    unsigned char *pbuf = (unsigned char *) chunk_buffer;
+
+    while (chunk_len > 0){
+
+        int num = send(recipient_socket_fd, pbuf, chunk_len, 0);
+        if (num == SOCKET_ERROR){
+
+            if (WSAGetLastError() == WSAEWOULDBLOCK){
+
+                // optional: use select() to check for timeout to fail the send
+                continue;
+            }
+            return ABORT;
+        }
+
+        pbuf += num;
+        chunk_len -= num;
+    }
+
+    return SUCCESS;
+}
+
+
+int send_bytes_size(int recipient_socket_fd, long bytes_size){
+
+    bytes_size = htonl(bytes_size);
+    return send_bytes_chunk(recipient_socket_fd, &bytes_size, sizeof(bytes_size));
+}
+
+
+int send_bytes_all(int recipient_socket_fd, void* all_bytes, int all_bytes_len){
+
+    unsigned char *bytes_buffer = (unsigned char *) all_bytes;
+
+
+    if (send_bytes_size(recipient_socket_fd, all_bytes_len) == ABORT)
+        return ABORT;
+
+    if (all_bytes_len > 0)
+    {
+        char chunk_buffer[1024];
+        do
+        {
+            unsigned int num_bytes_read = min(all_bytes_len, sizeof(buffer));
+
+            if (num_bytes_read < 1)
+                return ABORT;
+            
+            strncpy(chunk_buffer, bytes_buffer, num_bytes_read);
+
+            if (send_bytes_chunk(recipient_socket_fd, chunk_buffer, num_bytes_read) == ABORT)
+                return ABORT;
+
+            all_bytes_len -= num_bytes_read;
+            all_bytes += num_bytes_read;
+        }
+        while (all_bytes_len > 0);
+
+    }
+    return SUCCESS;
+}
+
+
+
+
 
 
 
