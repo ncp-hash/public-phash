@@ -17,18 +17,6 @@
     For any questions, you may contact NCP-Hash Group via opening an issue on https://github.com/ncp-hash/public-phash/issues
 */
 
-// functions to implement
-// client_connect_to_server
-// client_
-// client_recieve_public_key (paillier)
-
-// server_send_betas
-// client_recieve_betas
-
-// client_send_enc_hash
-// server_recieve_enc_hash
-
-//******************************************************************************************
 #include <assert.h>
 
 #include <stdio.h> 
@@ -247,8 +235,7 @@ void write_paillier_key_file(void* key){
 	}
 
 	fwrite(key,1,PAILLIER_KEY_SIZE,fptr);
-		printf("e\n");
-
+	
 	//write null terminator to file
 	fwrite("\0",1,1,fptr);
 	fclose(fptr);
@@ -277,136 +264,3 @@ paillier_pubkey_t* read_paillier_key_file(void){
 
 	return paillier_pubkey_from_hex(return_key);
 }
-
-// int send_bytes_chunk(int recipient_socket_fd, void *chunk_buffer, int chunk_len){
-
-//     unsigned char *pbuf = (unsigned char *) chunk_buffer; //todo: check on this later
-
-//     while (chunk_len > 0){
-
-//         int num = send(recipient_socket_fd, pbuf, chunk_len, 0);
-//         if (num == -1) return ABORT;
-
-//         pbuf += num;
-//         chunk_len -= num;
-//     }
-
-//     return SUCCESS;
-// }
-
-
-// int send_bytes_len(int recipient_socket_fd, long bytes_len){
-
-//     bytes_len = htonl(bytes_len);
-//     return send_bytes_chunk(recipient_socket_fd, &bytes_len, sizeof(bytes_len));
-// }
-
-
-// int send_bytes_all(int recipient_socket_fd, void* all_bytes, int all_bytes_len){
-
-//     unsigned char *bytes_buffer = (unsigned char *) all_bytes;
-
-
-//     if (send_bytes_len(recipient_socket_fd, all_bytes_len) == ABORT)
-//         return ABORT;
-
-//     if (all_bytes_len > 0)
-//     {
-//         char chunk_buffer[1024];
-//         do
-//         {
-
-//             unsigned int num_bytes_read = min(all_bytes_len, sizeof(chunk_buffer));
-
-//             if (num_bytes_read < 1){
-//                 return ABORT;
-//                 printf("ABORT SEND\n");
-//             }
-
-            
-//             strncpy(chunk_buffer, bytes_buffer, num_bytes_read);
-
-//             if (send_bytes_chunk(recipient_socket_fd, chunk_buffer, num_bytes_read) == ABORT)
-//                 return ABORT;
-
-//             all_bytes_len -= num_bytes_read;
-//             all_bytes += num_bytes_read;
-//         }
-//         while (all_bytes_len > 0);
-
-//     }
-
-//     for(int i = 0; i < 256*256; i++){
-//         printf("%02x", ((char *)all_bytes)[i]);
-//     }
-//     putchar( '\n' );
-
-//     return SUCCESS;
-// }
-
-
-
-// int receive_bytes_chunk(int sender_socket_fd, void *chunk_buffer, int chunk_buffer_len){
-
-//     unsigned char *pchunk_buffer = (unsigned char *) chunk_buffer;
-
-//     while (chunk_buffer_len > 0){
-
-//         int num_bytes_received = recv(sender_socket_fd, pchunk_buffer, chunk_buffer_len, 0);
-
-//         if (num_bytes_received == -1 || num_bytes_received == 0) return ABORT; 
-
-//         pchunk_buffer += num_bytes_received;
-//         chunk_buffer_len -= num_bytes_received;
-//     }
-
-//     return SUCCESS;
-// }
-
-
-// int receive_bytes_len(int sender_socket_fd, long *bytes_len){
-
-//     if (receive_bytes_chunk(sender_socket_fd, bytes_len, sizeof(bytes_len)) == ABORT)
-//         return ABORT;
-
-//     *bytes_len = ntohl(*bytes_len);
-//     return SUCCESS;
-// }
-
-// int receive_bytes_all(int sender_socket_fd, void* all_bytes){
-
-// 	printf("receive was called\n");
-
-//     unsigned char *bytes_buffer = (unsigned char *) all_bytes;
-
-//     long all_bytes_len;
-//     long offset = 0;
-
-//     if (receive_bytes_len(sender_socket_fd, &all_bytes_len) == ABORT)
-//         return ABORT;
-
-//     if (all_bytes_len > 0){
-
-//         char chunk_buffer[1024];
-//         do{
-//             int num_bytes_received = min(all_bytes_len, sizeof(chunk_buffer));
-
-//             if (receive_bytes_chunk(sender_socket_fd, chunk_buffer, num_bytes_received) == ABORT)
-//                 return ABORT;
-
-//             memcpy(all_bytes + offset, chunk_buffer, num_bytes_received);
-//             offset += num_bytes_received;
-//             all_bytes_len -= num_bytes_received;
-
-//         } while (all_bytes_len > 0);
-//     }
-
-
-//     //print out the 
-//     for(int i = 0; i < 256*256; i++){
-//         printf("%02x", ((char *) all_bytes)[i]);
-//     }
-//     putchar( '\n' );
-
-//     return SUCCESS;
-// }

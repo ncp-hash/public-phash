@@ -332,18 +332,12 @@ void write_enc_betas_to_key_file(std::vector<paillier_ciphertext_t*> encrypted_b
 
 std::vector<paillier_ciphertext_t*> read_enc_betas_from_key_file(paillier_pubkey_t* pu){
 
-    printf("a\n");
     std::fstream betas_key_file("betas.key", std::fstream::in|std::fstream::binary); // open the file in read mode
-    printf("b\n");
     char* whole_ctxt = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2*NUM_BETAS); // allocate space to store the whole char* array
-    printf("c\n");
     betas_key_file.read(whole_ctxt, PAILLIER_BITS_TO_BYTES(pu->bits)*2*NUM_BETAS); // read the whole input at once from the filestream
-    printf("d\n");
     std::vector<paillier_ciphertext_t*> enc_betas;// prepare vector for read betas
-    printf("d\n");
     for (int i = 0; i < NUM_BETAS; ++i) {
-        printf("%d\n", i);
-    
+        
         // The length of the ciphertext is twice the length of the key
         char* char_beta = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2);
         // Coppy one beta from the whole array into char_beta

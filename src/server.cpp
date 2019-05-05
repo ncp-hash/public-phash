@@ -46,12 +46,6 @@ int main() {
     char* hex_pk = paillier_pubkey_to_hex(pu);
     printf("public key written: %s\n",hex_pk);
     write_paillier_key_file(hex_pk);
-    printf("1\n");
-
-    // how you read paillier key
-    // paillier_pubkey_t* test_ptr = read_key_file("paillier");
-    // printf("read: %s\n", paillier_pubkey_to_hex(test_ptr));
-
     
     // ========================================================================================
     // WRITE BETA ARRAY ENCRYPTION TO FILE (DO ONCE)
@@ -61,56 +55,6 @@ int main() {
     get_rho_beta_arr(rho_num, betas, min_rho, max_rho, beta_mean, beta_std);
     std::vector<paillier_ciphertext_t*> enc_betas = encrypt_betas(betas, pu);
     write_enc_betas_to_key_file(enc_betas, pu);
-
-
-
-    //how you read betas
-    // paillier_ciphertext_t** beta_key_read = read_key_file("betas");
-    // std::vector<paillier_ciphertext_t*> beta_read_vector(beta_key_read, beta_key_read + 256);
-    // write_key_file("betas_test", enc_beta_vector_to_c_str(beta_read_vector,pu));
-
-                // // ========================================================================================
-                // // SHARE THE PUBLIC KEY
-                // // ========================================================================================
-                // /* Prepare/clean file for export */
-                // std::fstream ipc1("ipc1.txt", std::fstream::out|std::fstream::trunc);
-                // char* hex_pk = paillier_pubkey_to_hex(pu);
-                // ipc1 << hex_pk;
-                // ipc1.close();
-
-                
-                // // ========================================================================================
-                // // BETA ARRAY ENCRYPTION
-                // // ========================================================================================
-
-                // std::vector<float> betas (arr_size, 0);                 // initialize a 0-vector and populate it with (rho_num) of betas
-                // get_rho_beta_arr(rho_num, betas, min_rho, max_rho, beta_mean, beta_std);
-
-                // std::vector<paillier_ciphertext_t*> enc_betas;          // declare a vector for encryptions of betas 
-
-                // /* EXPORT TO BYTESTRING */
-                // // Open the file in "append" mode
-                // std::fstream ipc2("ipc2.txt", std::fstream::out|std::fstream::trunc|std::fstream::binary);
-                // std::ostringstream export_str;                          // use sstream to create one string buffer for the whole vector
-                // for (int i = 0; i < arr_size; ++i) {
-                //     paillier_plaintext_t* plain_beta = paillier_plaintext_from_ui((int)abs(betas[i])); // currently, we only consider positive beta values
-                //     paillier_ciphertext_t* enc_beta = paillier_enc(NULL, pu, plain_beta, paillier_get_rand_devurandom);
-                //     enc_betas.push_back(enc_beta);
-                    
-                //     // The length of the ciphertext is twice the length of the key
-                //     char* char_beta = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(pu->bits)*2, enc_beta);
-                //     // Append the bytestring for each beta to the string buffer
-                //     export_str.write(char_beta, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
-
-                //     /* CLEANUP */
-                //     paillier_freeplaintext(plain_beta);
-
-                // }
-                // // Convert the string buffer into char* and write it into the file
-                // ipc2.write(export_str.str().c_str(), PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size);
-                // ipc2.close();
-
-                // std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 
     // ========================================================================================
     // Receive Hash Over TCP
@@ -124,28 +68,6 @@ int main() {
     paillier_ciphertext_t* enc_hash = paillier_ciphertext_from_bytes((void*)enc_hash_string, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
     paillier_plaintext_t* hash = paillier_dec(NULL, pu, pr, enc_hash);
     gmp_printf("Decrypted hash: %Zd\n", hash);
-
-            // // ========================================================================================
-            // // HASH DECRYPTION
-            // // ========================================================================================
-
-
-
-            // /* IMPORT FROM BYTESTRINGS */
-            // std::fstream ipc3("ipc3.txt", std::fstream::in|std::fstream::binary); // open the file
-            // // The length of the ciphertext is twice the length of the key
-            // char* char_result = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2);
-            // ipc3.read(char_result, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
-            // paillier_ciphertext_t* read_res = paillier_ciphertext_from_bytes((void*)char_result, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
-            // ipc3.close();
-
-            //  /* CLEANUP */
-            // free(char_result);
-
-            // paillier_plaintext_t* dec_res;
-            // dec_res = paillier_dec(NULL, pu, pr, read_res);
-            // gmp_printf("Decrypted hash: %Zd\n", dec_res);
-
 
     // // ========================================================================================
     // // === ZKP ADDITIONAL IPC ===
@@ -214,16 +136,19 @@ int main() {
     // */
 
    
-    // /* CLEANUP */
+    /* CLEANUP AND SOCKET CLOSURE*/
 
-    // paillier_freeciphertext(read_res);
-    // paillier_freeplaintext(dec_res);
-    // for (int i = 0; i < arr_size; ++i) {
-    //     paillier_freeciphertext(enc_betas[i]);
-    // }
-    // enc_betas.clear();
-    // paillier_freepubkey(pu);
-    // paillier_freeprvkey(pr);
+    close(listening_socket);
+    close(hash_socket);
+
+    paillier_freeciphertext(enc_hash);
+    paillier_freeplaintext(hash);
+    for (int i = 0; i < arr_size; ++i) {
+        paillier_freeciphertext(enc_betas[i]);
+    }
+    enc_betas.clear();
+    paillier_freepubkey(pu);
+    paillier_freeprvkey(pr);
     
     return 0;
 
