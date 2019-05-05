@@ -17,40 +17,8 @@
     For any questions, you may contact NCP-Hash Group via opening an issue on https://github.com/ncp-hash/public-phash/issues
 */
 
-#include <iostream>
-#include <cstdlib>
-#include <stdio.h>
-#include<vector>
-#include <gmpxx.h>
-#include<fstream>
-#include"assert.h"
-extern "C" {
-    #include <gmp.h>
-    #include <paillier.h>
-}
-#include "client.hpp"
-#include <chrono>
-#include <thread>
-#include <cstring>
-
-void mult_and_sum( paillier_pubkey_t* pu, paillier_ciphertext_t* sum, std::vector<paillier_ciphertext_t*> const &e_betas, std::vector<int> const &rho_sums) {
-    /* PRE: Paillier AHE function accepts vector of ciphertexts(initialized with encryption of zero) for result, and betas, the corresponding vector of ints for rho sums, and the public key
-        POST: Stores the encryption of sum of rho*beta products in the sum argument*/
-
-    assert(e_betas.size() == rho_sums.size());              // assert all three input vectors are same size
-    int limit = e_betas.size();
-    for(int i = 0; i < limit; ++i) {                        // computing dot product = sum((ciphertext[i] * plaintext[i])):
-        paillier_plaintext_t* plain_rho_sum = paillier_plaintext_from_ui((int)rho_sums[i]);
-        paillier_ciphertext_t* enc_mult_res = paillier_create_enc_zero();
-        paillier_exp( pu, enc_mult_res, e_betas[i], plain_rho_sum );
-        paillier_mul(pu, sum, sum, enc_mult_res );
-
-        /* CLEANUP */
-        paillier_freeplaintext(plain_rho_sum);
-        paillier_freeciphertext(enc_mult_res);
-    }
-}
-
+#include "ncph.hpp"
+#include "tcpUtils.c"
 
 int main() {
 
