@@ -17,18 +17,6 @@
     For any questions, you may contact NCP-Hash Group via opening an issue on https://github.com/ncp-hash/public-phash/issues
 */
 
-// functions to implement
-// client_connect_to_server
-// client_
-// client_recieve_public_key (paillier)
-
-// server_send_betas
-// client_recieve_betas
-
-// client_send_enc_hash
-// server_recieve_enc_hash
-
-//******************************************************************************************
 #include <assert.h>
 
 #include <stdio.h> 
@@ -40,6 +28,8 @@
 #include <sys/socket.h> 
 #include <sys/types.h> 
 #include <arpa/inet.h>
+#include <stdint.h>
+#include <errno.h>
 
 // #define MAX 513 //256, 2-byte betas with one /n character at end 
 #define MAX 65537 // 65,536 bytes plus one terminating byte
@@ -54,6 +44,7 @@
 #define BETA_SIZE 256 //each beta is 256 bytes
 #define NUM_BETAS 256 //there are 256 betas in total
 #define PAILLIER_KEY_SIZE 256 //this is 256 bytes
+
 
 int min(int first, int second){
 
@@ -153,66 +144,75 @@ int client_connect_to_server(void){
 	return socketFD;
 }
 
+void print_bytes(void *buf,int num_bytes){
+
+	char* charbuf = (char*)buf;
+
+	for (int i = 0; i < num_bytes; i++){
+		printf("%02x", charbuf[i]);
+	}
+
+	printf("\n");
+}
+
+/* Like read(), but retry on EINTR and EWOULDBLOCK,
+ * abort on other errors, and don't return early. */
+void xread(int fd, void *buf, size_t nBytes)
+{
+	do {
+		ssize_t n = read(fd, buf, nBytes);
+		if (n < 0 && errno == EINTR) continue;
+		if (n < 0 && errno == EWOULDBLOCK) continue;
+		if (n < 0) perror("read"), abort();
+		buf = (char *)buf + n;
+		nBytes -= n;
+	} while (nBytes);
+}
+
+/* Like write(), but retry on EINTR and EWOULDBLOCK,
+ * abort on other errors, and don't return early. */
+void xwrite(int fd, const void *buf, size_t nBytes)
+{
+	do {
+		ssize_t n = write(fd, buf, nBytes);
+		printf("number of bytes written by xwrite: %d\n", n);
+		if (n < 0 && errno == EINTR) continue;
+		if (n < 0 && errno == EWOULDBLOCK) continue;
+		if (n < 0) perror("write"), abort();
+		buf = (const char *)buf + n;
+		nBytes -= n;
+	} while (nBytes);
+}
+
+
 //sends message, blocks for response. 
 // will loop indefinitely without no recipient response
 //re implement with forks
 //returns 0 on success
-int send_char_string(int recipient_socket_fd, char* message, int message_len){
 
-	char recipient_response[message_len];
-	char* expected_response = (char*)malloc((message_len+1) * sizeof(char));
-	strcpy(expected_response, "message received.\n"); //TODO: may need to use strncopy 
-	//char expected_response[message_len] = "message received.\n";
+int send_char_string(int recipient_socket_fd, char* message, int32_t message_len){
 
-	while(TRUE){
-
-		write(recipient_socket_fd, message, message_len);
-		printf("message sent:\n%s\n", message);
-
-		bzero(recipient_response, message_len); 
-		read(recipient_socket_fd, recipient_response, message_len);
-
-		if ((strcmp(recipient_response, expected_response)) == 0) { 
-			printf("message was confirmed as received.\n"); 
-			return 0; 
-		} 
-	} 
-
+	printf("hash length (bytes): %d\n",message_len);
+	xwrite(recipient_socket_fd,&message_len,4);
+	xwrite(recipient_socket_fd,message,message_len);
+	printf("hash sent:\n");
+	print_bytes(message,message_len);
 }
 
 
 //recieves a character string and then returns a confirmation to sender
-char* receive_char_string(int sender_socket_fd, int message_len){
+char* receive_char_string(int sender_socket_fd){
 
-	char* received_message = (char*)malloc((message_len+1) * sizeof(char));
+	int32_t message_len;
+	xread(sender_socket_fd,&message_len,4);
+	printf("hash length (bytes):%d\n", message_len);
+	// char message[message_len];
+	char* message = malloc((message_len) * sizeof(char));
+	xread(sender_socket_fd,message,message_len);
+	printf("hash received: ");
+	print_bytes(message, message_len);
 
-	char* confirmation = (char*)malloc((message_len+1) * sizeof(char));
-	strcpy(confirmation, "message received.\n"); //TODO: may need to use strncopy 
-
-	char endOfTransmission;
-
-	while (TRUE) { 
-
-		bzero(received_message, message_len); 
-
-		// get message from client; copy it to received_message buffer 
-		read(sender_socket_fd, received_message, message_len); 
-		printf("message received:\n%s\n", received_message);
-
-		// and send that confirmation message to client 
-		write(sender_socket_fd, confirmation, message_len); //may want to replace with rec or send avoid problems in large filetypes
-
-		// if client string contains "\n" then server exit and chat ended.
-		//endOfTransmission = received_message[strlen(received_message)-1]; 
-		endOfTransmission = received_message[message_len-1]; 
-		if (strcmp("\n", &endOfTransmission) == 0) { 
-			printf("server quitting\n"); 
-			break; 
-		}
-	} 
-
-	free(confirmation);
-	return received_message;
+	return message;
 }
 
 // ========================================================================================
@@ -247,8 +247,7 @@ void write_paillier_key_file(void* key){
 	}
 
 	fwrite(key,1,PAILLIER_KEY_SIZE,fptr);
-		printf("e\n");
-
+	
 	//write null terminator to file
 	fwrite("\0",1,1,fptr);
 	fclose(fptr);
@@ -278,135 +277,60 @@ paillier_pubkey_t* read_paillier_key_file(void){
 	return paillier_pubkey_from_hex(return_key);
 }
 
-// int send_bytes_chunk(int recipient_socket_fd, void *chunk_buffer, int chunk_len){
+// int send_char_string(int recipient_socket_fd, char* message, int message_len){
 
-//     unsigned char *pbuf = (unsigned char *) chunk_buffer; //todo: check on this later
+// 	char recipient_response[message_len];
+// 	char* expected_response = (char*)malloc((message_len+1) * sizeof(char));
+// 	strcpy(expected_response, "message received.\n"); //TODO: may need to use strncopy 
+// 	//char expected_response[message_len] = "message received.\n";
 
-//     while (chunk_len > 0){
+// 	while(TRUE){
 
-//         int num = send(recipient_socket_fd, pbuf, chunk_len, 0);
-//         if (num == -1) return ABORT;
+// 		write(recipient_socket_fd, message, message_len);
+// 		printf("message sent:\n%s\n", message);
 
-//         pbuf += num;
-//         chunk_len -= num;
-//     }
+// 		bzero(recipient_response, message_len); 
+// 		read(recipient_socket_fd, recipient_response, message_len);
 
-//     return SUCCESS;
+// 		if ((strcmp(recipient_response, expected_response)) == 0) { 
+// 			printf("message was confirmed as received.\n"); 
+// 			return 0; 
+// 		} 
+// 	} 
+
 // }
 
 
-// int send_bytes_len(int recipient_socket_fd, long bytes_len){
+// //recieves a character string and then returns a confirmation to sender
+// char* receive_char_string(int sender_socket_fd, int message_len){
 
-//     bytes_len = htonl(bytes_len);
-//     return send_bytes_chunk(recipient_socket_fd, &bytes_len, sizeof(bytes_len));
-// }
+// 	char* received_message = (char*)malloc((message_len+1) * sizeof(char));
 
+// 	char* confirmation = (char*)malloc((message_len+1) * sizeof(char));
+// 	strcpy(confirmation, "message received.\n"); //TODO: may need to use strncopy 
 
-// int send_bytes_all(int recipient_socket_fd, void* all_bytes, int all_bytes_len){
+// 	char endOfTransmission;
 
-//     unsigned char *bytes_buffer = (unsigned char *) all_bytes;
+// 	while (TRUE) { 
 
+// 		bzero(received_message, message_len); 
 
-//     if (send_bytes_len(recipient_socket_fd, all_bytes_len) == ABORT)
-//         return ABORT;
+// 		// get message from client; copy it to received_message buffer 
+// 		read(sender_socket_fd, received_message, message_len); 
+// 		printf("message received:\n%s\n", received_message);
 
-//     if (all_bytes_len > 0)
-//     {
-//         char chunk_buffer[1024];
-//         do
-//         {
+// 		// and send that confirmation message to client 
+// 		write(sender_socket_fd, confirmation, message_len); //may want to replace with rec or send avoid problems in large filetypes
 
-//             unsigned int num_bytes_read = min(all_bytes_len, sizeof(chunk_buffer));
+// 		// if client string contains "\n" then server exit and chat ended.
+// 		//endOfTransmission = received_message[strlen(received_message)-1]; 
+// 		endOfTransmission = received_message[message_len-1]; 
+// 		if (strcmp("\n", &endOfTransmission) == 0) { 
+// 			printf("server quitting\n"); 
+// 			break; 
+// 		}
+// 	} 
 
-//             if (num_bytes_read < 1){
-//                 return ABORT;
-//                 printf("ABORT SEND\n");
-//             }
-
-            
-//             strncpy(chunk_buffer, bytes_buffer, num_bytes_read);
-
-//             if (send_bytes_chunk(recipient_socket_fd, chunk_buffer, num_bytes_read) == ABORT)
-//                 return ABORT;
-
-//             all_bytes_len -= num_bytes_read;
-//             all_bytes += num_bytes_read;
-//         }
-//         while (all_bytes_len > 0);
-
-//     }
-
-//     for(int i = 0; i < 256*256; i++){
-//         printf("%02x", ((char *)all_bytes)[i]);
-//     }
-//     putchar( '\n' );
-
-//     return SUCCESS;
-// }
-
-
-
-// int receive_bytes_chunk(int sender_socket_fd, void *chunk_buffer, int chunk_buffer_len){
-
-//     unsigned char *pchunk_buffer = (unsigned char *) chunk_buffer;
-
-//     while (chunk_buffer_len > 0){
-
-//         int num_bytes_received = recv(sender_socket_fd, pchunk_buffer, chunk_buffer_len, 0);
-
-//         if (num_bytes_received == -1 || num_bytes_received == 0) return ABORT; 
-
-//         pchunk_buffer += num_bytes_received;
-//         chunk_buffer_len -= num_bytes_received;
-//     }
-
-//     return SUCCESS;
-// }
-
-
-// int receive_bytes_len(int sender_socket_fd, long *bytes_len){
-
-//     if (receive_bytes_chunk(sender_socket_fd, bytes_len, sizeof(bytes_len)) == ABORT)
-//         return ABORT;
-
-//     *bytes_len = ntohl(*bytes_len);
-//     return SUCCESS;
-// }
-
-// int receive_bytes_all(int sender_socket_fd, void* all_bytes){
-
-// 	printf("receive was called\n");
-
-//     unsigned char *bytes_buffer = (unsigned char *) all_bytes;
-
-//     long all_bytes_len;
-//     long offset = 0;
-
-//     if (receive_bytes_len(sender_socket_fd, &all_bytes_len) == ABORT)
-//         return ABORT;
-
-//     if (all_bytes_len > 0){
-
-//         char chunk_buffer[1024];
-//         do{
-//             int num_bytes_received = min(all_bytes_len, sizeof(chunk_buffer));
-
-//             if (receive_bytes_chunk(sender_socket_fd, chunk_buffer, num_bytes_received) == ABORT)
-//                 return ABORT;
-
-//             memcpy(all_bytes + offset, chunk_buffer, num_bytes_received);
-//             offset += num_bytes_received;
-//             all_bytes_len -= num_bytes_received;
-
-//         } while (all_bytes_len > 0);
-//     }
-
-
-//     //print out the 
-//     for(int i = 0; i < 256*256; i++){
-//         printf("%02x", ((char *) all_bytes)[i]);
-//     }
-//     putchar( '\n' );
-
-//     return SUCCESS;
+// 	free(confirmation);
+// 	return received_message;
 // }
