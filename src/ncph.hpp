@@ -33,6 +33,7 @@
 extern "C" {
     #include <gmp.h>
     #include <paillier.h>
+    #include "tcpUtils.c"
 }
 #include <chrono>
 #include <thread>
@@ -312,18 +313,17 @@ std::vector<paillier_ciphertext_t*> encrypt_betas(std::vector<float> betas, pail
 //this function takes encrypted betas vector and writes it to a file  
 void write_enc_betas_to_key_file(std::vector<paillier_ciphertext_t*> encrypted_betas, paillier_pubkey_t* pu){
 
-    //TODO make sure to clear the file before opening it in append mode
-    std::vector<paillier_ciphertext_t*> enc_betas; // declare a vector for encryptions of betas 
     std::fstream betas_key_file("betas.key", std::fstream::out|std::fstream::trunc|std::fstream::binary);
     std::ostringstream export_str; // use sstream to create one string buffer for the whole vector
-    
+
     for (int i = 0; i < NUM_BETAS; ++i) {
         
         // The length of the ciphertext is twice the length of the key
-        char* char_beta = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(pu->bits)*2, enc_betas[i]);
+        char* char_beta = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(pu->bits)*2, encrypted_betas[i]);
         // Append the bytestring for each beta to the string buffer
         export_str.write(char_beta, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
     }
+
     // Convert the string buffer into char* and write it into the file
     betas_key_file.write(export_str.str().c_str(), PAILLIER_BITS_TO_BYTES(pu->bits)*2*NUM_BETAS);
     betas_key_file.close();
@@ -332,12 +332,17 @@ void write_enc_betas_to_key_file(std::vector<paillier_ciphertext_t*> encrypted_b
 
 std::vector<paillier_ciphertext_t*> read_enc_betas_from_key_file(paillier_pubkey_t* pu){
 
-    std::vector<paillier_ciphertext_t*> enc_betas;// prepare vector for read betas
+    printf("a\n");
     std::fstream betas_key_file("betas.key", std::fstream::in|std::fstream::binary); // open the file in read mode
+    printf("b\n");
     char* whole_ctxt = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2*NUM_BETAS); // allocate space to store the whole char* array
+    printf("c\n");
     betas_key_file.read(whole_ctxt, PAILLIER_BITS_TO_BYTES(pu->bits)*2*NUM_BETAS); // read the whole input at once from the filestream
-    
+    printf("d\n");
+    std::vector<paillier_ciphertext_t*> enc_betas;// prepare vector for read betas
+    printf("d\n");
     for (int i = 0; i < NUM_BETAS; ++i) {
+        printf("%d\n", i);
     
         // The length of the ciphertext is twice the length of the key
         char* char_beta = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2);
@@ -354,4 +359,41 @@ std::vector<paillier_ciphertext_t*> read_enc_betas_from_key_file(paillier_pubkey
     betas_key_file.close();
     free(whole_ctxt);
     return enc_betas;
+}
+
+//encrypts betas from beta vectors and returns a c string for file/tcp output
+const char* beta_vector_enc_to_c_str(std::vector<float> betas, paillier_pubkey_t* pu){
+
+    // use sstream to create one string buffer for the whole vector
+    std::ostringstream export_str; 
+    std::vector<paillier_ciphertext_t*> enc_betas;
+
+    for (int i = 0; i < 256; ++i) {
+        paillier_plaintext_t* plain_beta = paillier_plaintext_from_ui((int)abs(betas[i])); // currently, we only consider positive beta values
+        paillier_ciphertext_t* enc_beta = paillier_enc(NULL, pu, plain_beta, paillier_get_rand_devurandom);
+        enc_betas.push_back(enc_beta);
+        
+        // The length of the ciphertext is twice the length of the key
+        char* char_beta = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(pu->bits)*2, enc_beta);
+        // Append the bytestring for each beta to the string buffer
+        export_str.write(char_beta, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
+
+        /* CLEANUP */
+        paillier_freeplaintext(plain_beta);
+
+    }
+    return export_str.str().c_str();
+}
+
+char* enc_beta_vector_to_c_str(std::vector<paillier_ciphertext_t*> enc_betas, paillier_pubkey_t* pu){
+
+    // use sstream to create one string buffer for the whole vector
+    std::ostringstream export_str; 
+    for (int i = 0; i < 256; ++i) {
+        // The length of the ciphertext is twice the length of the key
+        char* char_beta = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(pu->bits)*2, enc_betas[i]);
+        // Append the bytestring for each beta to the string buffer
+        export_str.write(char_beta, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
+    }
+    return export_str.str().c_str();
 }

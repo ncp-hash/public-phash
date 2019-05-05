@@ -1,3 +1,22 @@
+/* ncphclient.cpp is the program that will run on the server side in the public-key PHash scheme.
+    Copyright (C) <2019>  <NCP-Hash Group>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    For any questions, you may contact NCP-Hash Group via opening an issue on https://github.com/ncp-hash/public-phash/issues
+*/
+
 // functions to implement
 // client_connect_to_server
 // client_
@@ -215,33 +234,23 @@ char* receive_char_string(int sender_socket_fd, int message_len){
 // copy locally (since it generated the public keys in the first place.)
 
 //what is the input type of the key itself? Is it void?
-void write_key_file(char* file_name, void* key){
+void write_paillier_key_file(void* key){
 
-	int num_bytes;
-    if (!strncmp(file_name,"betas",5)) num_bytes = (BETA_SIZE * NUM_BETAS);
-    if (!strncmp(file_name,"paillier",8)) num_bytes = PAILLIER_KEY_SIZE;
-    if (!strncmp(file_name,"betas_test",10)) num_bytes = (BETA_SIZE * NUM_BETAS);
+	char* file_path = "./paillier.key";
 
-
-	//intialize filename
-	char file_path[255];
-	snprintf(file_path,255,"./%s.key",file_name);
-	
-	//open file in append mode if a single beta
 	FILE *fptr;
-	if(!strncmp(file_name,"betas",5)) fptr = fopen(file_path,"ab");
-	else fptr = fopen(file_path,"wb");
+	fptr = fopen(file_path,"wb");
 
-	//write null terminator when it's a paillier key (may need null terminator for both)
-	fwrite(key,1,num_bytes,fptr);
-	if(!strncmp(file_name,"paillier",8)) fwrite("\0",1,1,fptr); //write the string null terminator to file
-
-	if(fptr == NULL)
-	{
+	if(fptr == NULL){
 	  printf("Error!");   
 	  exit(1);             
 	}
 
+	fwrite(key,1,PAILLIER_KEY_SIZE,fptr);
+		printf("e\n");
+
+	//write null terminator to file
+	fwrite("\0",1,1,fptr);
 	fclose(fptr);
 }
 
@@ -253,28 +262,20 @@ void write_key_file(char* file_name, void* key){
 //to cast the paillier public key returned from this function in c++ code, do this:
 // paillier_ciphertext_t paillier_key = *ptr_to_return_key;
 
-void* read_key_file(char* file_name){
+paillier_pubkey_t* read_paillier_key_file(void){
 
-	int num_bytes;
-    if (!strncmp(file_name,"betas",5)) num_bytes = (BETA_SIZE * NUM_BETAS);
-    if (!strncmp(file_name,"paillier",8)) num_bytes = PAILLIER_KEY_SIZE + 1;// +1 byte for the null terminator
-
-	//initialize filename
-	char file_path[255];
-	snprintf(file_path,255,"./%s.key",file_name);
+	int num_bytes = PAILLIER_KEY_SIZE + 1;
+	char* file_path = "./paillier.key";
 
 	//alocate memory for key to be returned
     FILE *key_file = fopen(file_path, "rb");  
-    unsigned char *return_key = malloc(num_bytes); //allocates that many bytes
-    
+    char *return_key = malloc(num_bytes); //allocates that many bytes
+
     //read key from file and close
     fread(return_key, 1, num_bytes, key_file);
     fclose(key_file); 
 
-    //return the paillier public key OR the pailler ciphertext (betas) depending on file_name
-	if (!strncmp(file_name,"betas",5)) return paillier_ciphertext_from_bytes(return_key, num_bytes);
-	if (!strncmp(file_name,"paillier",8)) return paillier_pubkey_from_hex(return_key);
-	return 1;
+	return paillier_pubkey_from_hex(return_key);
 }
 
 // int send_bytes_chunk(int recipient_socket_fd, void *chunk_buffer, int chunk_len){

@@ -18,7 +18,6 @@
 */
 
 #include "ncph.hpp"
-#include "tcpUtils.c"
 
 int main() {
 
@@ -46,41 +45,41 @@ int main() {
     // READ THE PUBLIC KEY AND ENCRYPTED BETAS
     // ========================================================================================
     // Read public key from disk and initialize it
-    std::fstream ipc1("ipc1.txt", std::fstream::in);
-    std::string hex_pk; 
-    std::getline(ipc1, hex_pk); 
-    paillier_pubkey_t* pu = paillier_pubkey_from_hex(&hex_pk[0]);
-    ipc1.close();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+    printf("before read\n");
+    paillier_pubkey_t* pu = read_paillier_key_file();
+    printf("after read\n");
 
 
-    /* IMPORT FROM BYTESTRINGS */
-    std::vector<paillier_ciphertext_t*> read_betas;         // prepare vector for read betas
-    std::fstream ipc2("ipc2.txt", std::fstream::in|std::fstream::binary); // open the file in read mode
-    char* whole_ctxt = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size); // allocate space to store the whole char* array
-    ipc2.read(whole_ctxt, PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size); // read the whole input at once from the filestream
-    
-    for (int i = 0; i < arr_size; ++i) {
-    
-        // The length of the ciphertext is twice the length of the key
-        char* char_beta = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2);
-        // Coppy one beta from the whole array into char_beta
-        memcpy(char_beta, whole_ctxt + i*PAILLIER_BITS_TO_BYTES(pu->bits)*2/sizeof(char), PAILLIER_BITS_TO_BYTES(pu->bits)*2/sizeof(char));
-        // Import the char* for one beta to paillier_ciphertext_t
-        paillier_ciphertext_t* enc_beta = paillier_ciphertext_from_bytes((void*)char_beta, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
-        // Push the encrypted beta to the vector
-        read_betas.push_back(enc_beta);
+            // /* IMPORT FROM BYTESTRINGS */
+            // std::vector<paillier_ciphertext_t*> read_betas;         // prepare vector for read betas
+            // std::fstream ipc2("ipc2.txt", std::fstream::in|std::fstream::binary); // open the file in read mode
+            // char* whole_ctxt = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size); // allocate space to store the whole char* array
+            // ipc2.read(whole_ctxt, PAILLIER_BITS_TO_BYTES(pu->bits)*2*arr_size); // read the whole input at once from the filestream
+            
+            // for (int i = 0; i < arr_size; ++i) {
+            
+            //     // The length of the ciphertext is twice the length of the key
+            //     char* char_beta = (char*)malloc(PAILLIER_BITS_TO_BYTES(pu->bits)*2);
+            //     // Coppy one beta from the whole array into char_beta
+            //     memcpy(char_beta, whole_ctxt + i*PAILLIER_BITS_TO_BYTES(pu->bits)*2/sizeof(char), PAILLIER_BITS_TO_BYTES(pu->bits)*2/sizeof(char));
+            //     // Import the char* for one beta to paillier_ciphertext_t
+            //     paillier_ciphertext_t* enc_beta = paillier_ciphertext_from_bytes((void*)char_beta, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
+            //     // Push the encrypted beta to the vector
+            //     read_betas.push_back(enc_beta);
 
-         /* CLEANUP */
-        free(char_beta);
+            //      /* CLEANUP */
+            //     free(char_beta);
 
-    }
+            // }
 
-    ipc2.close();
+            // ipc2.close();
 
-    /* CLEANUP */
-    free(whole_ctxt);
+            // /* CLEANUP */
+            // free(whole_ctxt);
+
+    std::vector<paillier_ciphertext_t*> read_betas = read_enc_betas_from_key_file(pu);
 
     // ========================================================================================
     // CLIENT'S ENCRYPTED MULTIPLICATION AND SUMMATION (= ENCRYPTION OF HASH)
@@ -114,13 +113,22 @@ int main() {
     *   Export A to bytestring and send it to server together with the real hash
     */
 
-    /* EXPORT TO BYTESTRING */
-    // Open the file in "append" mode
-    std::fstream ipc3("ipc3.txt", std::fstream::out|std::fstream::trunc|std::fstream::binary);
-    // The length of the ciphertext is twice the length of the key
-    char* char_result = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(pu->bits)*2, enc_sum_res);
-    ipc3.write(char_result, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
-    ipc3.close();
+        // /* EXPORT TO BYTESTRING */
+        // // Open the file in "append" mode
+        // std::fstream ipc3("ipc3.txt", std::fstream::out|std::fstream::trunc|std::fstream::binary);
+        // // The length of the ciphertext is twice the length of the key
+        // char* char_result = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(pu->bits)*2, enc_sum_res);
+        // ipc3.write(char_result, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
+        // ipc3.close();
+
+    // ========================================================================================
+    // SEND ENCRYPTED HASH TO SERVER
+    // ========================================================================================
+
+    char* enc_hash_string = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(pu->bits)*2, enc_sum_res);
+    int hash_socket =  client_connect_to_server();
+    send_char_string(hash_socket, enc_hash_string, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
+    close(hash_socket);
 
     // ========================================================================================
     // === ZKP ADDITIONAL IPC ===
