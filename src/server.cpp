@@ -63,7 +63,7 @@ int main() {
     int listening_socket =  server_init();
     int hash_socket = server_connect_to_client(listening_socket);
 
-    char* enc_hash_string = receive_char_string(hash_socket,  PAILLIER_BITS_TO_BYTES(pu->bits)*2);
+    char* enc_hash_string = receive_char_string(hash_socket);
 
     paillier_ciphertext_t* enc_hash = paillier_ciphertext_from_bytes((void*)enc_hash_string, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
     paillier_plaintext_t* hash = paillier_dec(NULL, pu, pr, enc_hash);

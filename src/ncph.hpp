@@ -33,7 +33,7 @@
 extern "C" {
     #include <gmp.h>
     #include <paillier.h>
-    #include "tcpUtils.c"
+    #include "tcp.c"
 }
 #include <chrono>
 #include <thread>

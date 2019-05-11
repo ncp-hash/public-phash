@@ -97,6 +97,7 @@ int main() {
 
     char* enc_hash_string = (char*)paillier_ciphertext_to_bytes(PAILLIER_BITS_TO_BYTES(pu->bits)*2, enc_sum_res);
     int hash_socket =  client_connect_to_server();
+    printf("paillier bytes: %d\n",PAILLIER_BITS_TO_BYTES(pu->bits)*2 );
     send_char_string(hash_socket, enc_hash_string, PAILLIER_BITS_TO_BYTES(pu->bits)*2);
     close(hash_socket);
 
