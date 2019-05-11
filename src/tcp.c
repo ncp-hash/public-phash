@@ -188,9 +188,8 @@ void xwrite(int fd, const void *buf, size_t nBytes)
 //sends message, blocks for response. 
 // will loop indefinitely without no recipient response
 //re implement with forks
-//returns 0 on success
 
-int send_char_string(int recipient_socket_fd, char* message, int32_t message_len){
+void send_char_string(int recipient_socket_fd, char* message, int32_t message_len){
 
 	printf("hash length (bytes): %d\n",message_len);
 	xwrite(recipient_socket_fd,&message_len,4);
