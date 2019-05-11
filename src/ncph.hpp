@@ -379,7 +379,7 @@ const char* beta_vector_enc_to_c_str(std::vector<float> betas, paillier_pubkey_t
     return export_str.str().c_str();
 }
 
-char* enc_beta_vector_to_c_str(std::vector<paillier_ciphertext_t*> enc_betas, paillier_pubkey_t* pu){
+const char* enc_beta_vector_to_c_str(std::vector<paillier_ciphertext_t*> enc_betas, paillier_pubkey_t* pu){
 
     // use sstream to create one string buffer for the whole vector
     std::ostringstream export_str; 

@@ -206,7 +206,7 @@ char* receive_char_string(int sender_socket_fd){
 	xread(sender_socket_fd,&message_len,4);
 	printf("hash length (bytes):%d\n", message_len);
 	// char message[message_len];
-	char* message = malloc((message_len) * sizeof(char));
+	char* message = (char*)malloc((message_len) * sizeof(char));
 	xread(sender_socket_fd,message,message_len);
 	printf("hash received: ");
 	print_bytes(message, message_len);
@@ -267,7 +267,7 @@ paillier_pubkey_t* read_paillier_key_file(void){
 
 	//alocate memory for key to be returned
     FILE *key_file = fopen(file_path, "rb");  
-    char *return_key = malloc(num_bytes); //allocates that many bytes
+    char *return_key = (char*)malloc(num_bytes); //allocates that many bytes
 
     //read key from file and close
     fread(return_key, 1, num_bytes, key_file);
