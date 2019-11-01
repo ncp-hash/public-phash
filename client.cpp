@@ -273,7 +273,9 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    client(argv);
+    const char* image = argv[1];
+
+    client(image);
 
     return 0;
 }
